@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./Teams.css";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL =  "https://taskflow-lzcg.onrender.com/api";
 
 function Teams() {
   const [teams, setTeams] = useState([]);

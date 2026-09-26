@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import "./Projects.css";
 
+// =====================================================
+// BACKEND URL
+// =====================================================
+
+const API_URL = "https://taskflow-lzcg.onrender.com";
+
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,9 +20,9 @@ function Projects() {
 
   const [creating, setCreating] = useState(false);
 
-  // =========================
+  // =====================================================
   // FETCH PROJECTS
-  // =========================
+  // =====================================================
 
   const fetchProjects = async () => {
     try {
@@ -31,7 +37,7 @@ function Projects() {
       }
 
       const response = await fetch(
-        "http://localhost:5000/api/projects",
+        `${API_URL}/api/projects`,
         {
           method: "GET",
           headers: {
@@ -43,7 +49,9 @@ function Projects() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch projects");
+        throw new Error(
+          data.message || "Failed to fetch projects"
+        );
       }
 
       setProjects(data.projects || []);
@@ -55,14 +63,17 @@ function Projects() {
     }
   };
 
-  // Load projects when page opens
+  // =====================================================
+  // LOAD PROJECTS WHEN PAGE OPENS
+  // =====================================================
+
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  // =========================
+  // =====================================================
   // CREATE PROJECT
-  // =========================
+  // =====================================================
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
@@ -73,10 +84,18 @@ function Projects() {
     try {
       const token = localStorage.getItem("token");
 
-      // Get the user's teams
+      if (!token) {
+        throw new Error("Please login again.");
+      }
+
+      // =================================================
+      // GET USER'S TEAMS
+      // =================================================
+
       const teamResponse = await fetch(
-        "http://localhost:5000/api/teams",
+        `${API_URL}/api/teams`,
         {
+          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -91,7 +110,10 @@ function Projects() {
         );
       }
 
-      if (!teamData.teams || teamData.teams.length === 0) {
+      if (
+        !teamData.teams ||
+        teamData.teams.length === 0
+      ) {
         throw new Error(
           "You must belong to a team before creating a project."
         );
@@ -100,14 +122,20 @@ function Projects() {
       // Use the first team for now
       const teamID = teamData.teams[0]._id;
 
+      // =================================================
+      // CREATE PROJECT
+      // =================================================
+
       const response = await fetch(
-        "http://localhost:5000/api/projects",
+        `${API_URL}/api/projects`,
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+
           body: JSON.stringify({
             projectName,
             teamID,
@@ -125,13 +153,19 @@ function Projects() {
         );
       }
 
-      // Add newly created project to UI
+      // =================================================
+      // ADD NEW PROJECT TO UI
+      // =================================================
+
       setProjects((previousProjects) => [
         data.project,
         ...previousProjects,
       ]);
 
-      // Reset form
+      // =================================================
+      // RESET FORM
+      // =================================================
+
       setProjectName("");
       setDescription("");
       setDeadline("");
@@ -139,30 +173,39 @@ function Projects() {
       setShowForm(false);
 
     } catch (error) {
-      console.error("Create project error:", error);
+      console.error(
+        "Create project error:",
+        error
+      );
+
       setError(error.message);
     } finally {
       setCreating(false);
     }
   };
 
-  // =========================
+  // =====================================================
   // FORMAT DATE
-  // =========================
+  // =====================================================
 
   const formatDate = (date) => {
-    if (!date) return "No deadline";
+    if (!date) {
+      return "No deadline";
+    }
 
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "en-US",
+      {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }
+    );
   };
 
-  // =========================
+  // =====================================================
   // LOADING
-  // =========================
+  // =====================================================
 
   if (loading) {
     return (
@@ -174,10 +217,16 @@ function Projects() {
     );
   }
 
+  // =====================================================
+  // PAGE
+  // =====================================================
+
   return (
     <div className="projects-page">
 
-      {/* HEADER */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
       <div className="projects-header">
 
@@ -199,7 +248,9 @@ function Projects() {
       </div>
 
 
-      {/* ERROR */}
+      {/* =================================================
+          ERROR
+      ================================================= */}
 
       {error && (
         <div className="projects-error">
@@ -208,7 +259,9 @@ function Projects() {
       )}
 
 
-      {/* CREATE PROJECT FORM */}
+      {/* =================================================
+          CREATE PROJECT FORM
+      ================================================= */}
 
       {showForm && (
         <div className="project-form-card">
@@ -235,9 +288,13 @@ function Projects() {
 
           <form onSubmit={handleCreateProject}>
 
+            {/* PROJECT NAME */}
+
             <div className="project-form-group">
 
-              <label>Project Name</label>
+              <label>
+                Project Name
+              </label>
 
               <input
                 type="text"
@@ -252,9 +309,13 @@ function Projects() {
             </div>
 
 
+            {/* DESCRIPTION */}
+
             <div className="project-form-group">
 
-              <label>Description</label>
+              <label>
+                Description
+              </label>
 
               <textarea
                 placeholder="Describe your project"
@@ -268,9 +329,13 @@ function Projects() {
             </div>
 
 
+            {/* DEADLINE */}
+
             <div className="project-form-group">
 
-              <label>Deadline</label>
+              <label>
+                Deadline
+              </label>
 
               <input
                 type="date"
@@ -283,6 +348,8 @@ function Projects() {
 
             </div>
 
+
+            {/* FORM BUTTONS */}
 
             <div className="project-form-actions">
 
@@ -312,7 +379,9 @@ function Projects() {
       )}
 
 
-      {/* PROJECTS */}
+      {/* =================================================
+          PROJECT LIST
+      ================================================= */}
 
       {projects.length === 0 ? (
 
@@ -322,7 +391,9 @@ function Projects() {
             +
           </div>
 
-          <h2>No projects yet</h2>
+          <h2>
+            No projects yet
+          </h2>
 
           <p>
             Create your first project to get started.
@@ -347,11 +418,13 @@ function Projects() {
               key={project._id}
             >
 
+              {/* PROJECT TOP */}
+
               <div className="project-page-card-top">
 
                 <div className="project-page-icon">
                   {project.projectName
-                    .substring(0, 2)
+                    ?.substring(0, 2)
                     .toUpperCase()}
                 </div>
 
@@ -362,10 +435,14 @@ function Projects() {
               </div>
 
 
+              {/* PROJECT NAME */}
+
               <h2>
                 {project.projectName}
               </h2>
 
+
+              {/* DESCRIPTION */}
 
               <p className="project-page-description">
                 {project.description ||
@@ -373,25 +450,35 @@ function Projects() {
               </p>
 
 
+              {/* PROJECT INFORMATION */}
+
               <div className="project-page-info">
 
                 <div>
-                  <span>Team</span>
+
+                  <span>
+                    Team
+                  </span>
 
                   <strong>
                     {project.teamID?.teamName ||
                       "Unknown Team"}
                   </strong>
+
                 </div>
 
 
                 <div>
-                  <span>Created by</span>
+
+                  <span>
+                    Created by
+                  </span>
 
                   <strong>
                     {project.createdBy?.name ||
                       "Unknown"}
                   </strong>
+
                 </div>
 
               </div>

@@ -39,7 +39,7 @@ function Signup({ onSignupSuccess, onBackToLogin }) {
       // =========================
 
       const signupResponse = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        "https://taskflow-lzcg.onrender.com/api/auth/signup",
         {
           method: "POST",
           headers: {
@@ -66,7 +66,7 @@ function Signup({ onSignupSuccess, onBackToLogin }) {
       // =========================
 
       const loginResponse = await fetch(
-        "http://localhost:5000/api/auth/login",
+        "https://taskflow-lzcg.onrender.com/api/auth/login",
         {
           method: "POST",
           headers: {
