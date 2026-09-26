@@ -1,0 +1,703 @@
+/* =========================
+   TASKFLOW SIGNUP PAGE
+========================= */
+
+.signup-page {
+  min-height: 100vh;
+  width: 100%;
+
+  background: #f7f8fc;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+  box-sizing: border-box;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+
+/* =========================
+   SIGNUP CARD
+========================= */
+
+.signup-card {
+  width: 490px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+
+  padding: 42px 46px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+}
+
+
+/* =========================
+   LOGO
+========================= */
+
+.signup-logo {
+  width: 60px;
+  height: 60px;
+
+  margin: 0 auto 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #6c5ce7;
+
+  color: #ffffff;
+
+  border-radius: 15px;
+
+  font-size: 34px;
+}
+
+
+/* =========================
+   HEADING
+========================= */
+
+.signup-card h1 {
+  margin: 0;
+
+  color: #111111;
+
+  font-size: 32px;
+  font-weight: 600;
+
+  letter-spacing: -1px;
+}
+
+
+/* =========================
+   SUBTITLE
+========================= */
+
+.signup-subtitle {
+  margin: 8px 0 28px;
+
+  color: #7a8496;
+
+  font-size: 17px;
+}
+
+
+/* =========================
+   FORM
+========================= */
+
+.signup-form-group {
+  margin-bottom: 17px;
+
+  text-align: left;
+}
+
+
+.signup-form-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #171717;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* =========================
+   INPUTS
+========================= */
+
+.signup-form-group input {
+  width: 100%;
+  height: 50px;
+
+  box-sizing: border-box;
+
+  padding: 0 15px;
+
+  background-color: #ffffff !important;
+
+  color: #111111 !important;
+
+  border: 1px solid #d9dce5;
+
+  border-radius: 11px;
+
+  outline: none;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  color-scheme: light;
+}
+
+
+.signup-form-group input::placeholder {
+  color: #7b8494 !important;
+
+  opacity: 1;
+}
+
+
+.signup-form-group input:focus {
+  background-color: #ffffff !important;
+
+  color: #111111 !important;
+
+  border-color: #6c5ce7;
+
+  box-shadow:
+    0 0 0 3px rgba(108, 92, 231, 0.12);
+}
+
+
+/* Chrome autofill */
+
+.signup-form-group input:-webkit-autofill,
+.signup-form-group input:-webkit-autofill:hover,
+.signup-form-group input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111111 !important;
+
+  caret-color: #111111 !important;
+
+  background-color: #ffffff !important;
+
+  transition:
+    background-color 5000s ease-in-out 0s;
+}
+
+
+/* =========================
+   ERROR
+========================= */
+
+.signup-error {
+  margin-bottom: 14px;
+
+  padding: 10px 12px;
+
+  background: #fff1f2;
+
+  color: #dc2626;
+
+  border: 1px solid #fecdd3;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+
+  text-align: left;
+}
+
+
+/* =========================
+   SUCCESS
+========================= */
+
+.signup-success {
+  margin-bottom: 14px;
+
+  padding: 10px 12px;
+
+  background: #ecfdf5;
+
+  color: #059669;
+
+  border: 1px solid #a7f3d0;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+}
+
+
+/* =========================
+   SIGNUP BUTTON
+========================= */
+
+.signup-button {
+  width: 100%;
+  height: 52px;
+
+  margin-top: 5px;
+
+  border: none;
+
+  border-radius: 11px;
+
+  background: #6c5ce7;
+
+  color: #ffffff;
+
+  font-family: inherit;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+
+.signup-button:hover {
+  background: #5d4bd6;
+}
+
+
+.signup-button:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================
+   LOGIN LINK
+========================= */
+
+.signup-login {
+  margin-top: 22px;
+
+  color: #7a8496;
+
+  font-size: 14px;
+}
+
+
+.signup-login button {
+  margin-left: 5px;
+
+  padding: 0;
+
+  border: none;
+
+  background: transparent;
+
+  color: #6c5ce7;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+
+.signup-login button:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+.signup-footer {
+  margin-top: 22px;
+
+  color: #9aa1b2;
+
+  font-size: 13px;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
+  .signup-page {
+    padding: 20px;
+  }
+
+  .signup-card {
+    width: 100%;
+
+    padding: 35px 25px;
+  }
+
+  .signup-card h1 {
+    font-size: 28px;
+  }
+
+  .signup-subtitle {
+    font-size: 15px;
+  }
+}
+/* =====================================================
+   SETTINGS MODAL
+===================================================== */
+
+.settings-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.55);
+
+  backdrop-filter: blur(5px);
+}
+
+
+/* =====================================================
+   MODAL
+===================================================== */
+
+.settings-modal {
+  width: 100%;
+  max-width: 560px;
+
+  background: #ffffff;
+
+  border-radius: 18px;
+
+  box-shadow:
+    0 25px 60px rgba(15, 23, 42, 0.25);
+
+  overflow: hidden;
+
+  animation: settingsModalAppear 0.2s ease-out;
+}
+
+
+@keyframes settingsModalAppear {
+
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+}
+
+
+/* =====================================================
+   MODAL HEADER
+===================================================== */
+
+.settings-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  padding: 24px 26px;
+
+  border-bottom: 1px solid #eef0f4;
+}
+
+
+.modal-label {
+  margin-bottom: 5px;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 1.2px;
+
+  color: #7c3aed;
+}
+
+
+.settings-modal-header h2 {
+  margin: 0;
+
+  font-size: 22px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+
+.settings-modal-header p {
+  margin: 6px 0 0;
+
+  font-size: 13px;
+
+  color: #6b7280;
+}
+
+
+.settings-modal-close {
+  width: 36px;
+  height: 36px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: #f3f4f6;
+
+  color: #4b5563;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.settings-modal-close:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+
+/* =====================================================
+   MODAL BODY
+===================================================== */
+
+.settings-modal-body {
+  padding: 24px 26px;
+}
+
+
+.modal-form-group {
+  margin-bottom: 20px;
+}
+
+
+.modal-form-group:last-child {
+  margin-bottom: 0;
+}
+
+
+.modal-form-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #374151;
+}
+
+
+.modal-form-group input {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  height: 46px;
+
+  padding: 0 13px;
+
+  border: 1px solid #dfe3ea;
+
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-size: 14px;
+
+  outline: none;
+
+  transition: 0.2s;
+}
+
+
+.modal-form-group input:focus {
+  border-color: #8b5cf6;
+
+  box-shadow:
+    0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+
+.modal-form-group input:disabled {
+  background: #f3f4f6;
+
+  color: #6b7280;
+
+  cursor: not-allowed;
+}
+
+
+.modal-form-group small {
+  display: block;
+
+  margin-top: 6px;
+
+  font-size: 11px;
+
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   MODAL ROLE
+===================================================== */
+
+.modal-role-display {
+  min-height: 58px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 0 14px;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 10px;
+
+  background: #f8fafc;
+}
+
+
+.modal-role-display > span:first-child {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #ede9fe;
+
+  color: #7c3aed;
+}
+
+
+.modal-role-display > div {
+  flex: 1;
+}
+
+
+.modal-role-display strong {
+  display: block;
+
+  font-size: 14px;
+
+  color: #1f2937;
+}
+
+
+.modal-role-display small {
+  margin-top: 3px;
+}
+
+
+.modal-lock {
+  font-size: 14px;
+}
+
+
+/* =====================================================
+   MODAL FOOTER
+===================================================== */
+
+.settings-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 18px 26px;
+
+  border-top: 1px solid #eef0f4;
+
+  background: #fafafa;
+}
+
+
+/* =====================================================
+   CANCEL BUTTON
+===================================================== */
+
+.cancel-settings-button {
+  height: 44px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d1d5db;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #374151;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+
+.cancel-settings-button:hover {
+  background: #f3f4f6;
+}
+
+
+.cancel-settings-button:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+/* =====================================================
+   VIEW-ONLY VALUE
+===================================================== */
+
+.settings-value {
+  min-height: 46px;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 0 14px;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 10px;
+
+  background: #f8fafc;
+
+  color: #1f2937;
+
+  font-size: 14px;
+  font-weight: 500;
+}
