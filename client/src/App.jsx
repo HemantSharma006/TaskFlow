@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import Login from "./Login";
 import Signup from "./Signup";
@@ -12,58 +12,123 @@ import "./App.css";
 
 const API_URL = "https://taskflow-lzcg.onrender.com/api";
 
+// =====================================================
+// API HELPER
+// =====================================================
+
+const apiRequest = async (endpoint, token, options = {}) => {
+  const controller = new AbortController();
+
+  // Prevent the UI from waiting forever if Render is slow/unavailable.
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 15000);
+
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+
+    return {
+      response,
+      data,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 function App() {
-  // =========================
-  // CHECK LOGIN SESSION
-  // =========================
+  // =====================================================
+  // USER / LOGIN SESSION
+  // =====================================================
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("token");
 
-    if (savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        return null;
-      }
+    // If one exists without the other, the session is invalid.
+    if (!savedUser || !savedToken) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      return null;
     }
 
-    return null;
+    try {
+      return JSON.parse(savedUser);
+    } catch {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      return null;
+    }
   });
 
-  // =========================
-  // LOGIN / SIGNUP STATE
-  // =========================
+  // =====================================================
+  // LOGIN / SIGNUP
+  // =====================================================
 
   const [showSignup, setShowSignup] = useState(false);
 
-  // =========================
-  // PAGE NAVIGATION
-  // =========================
+  // =====================================================
+  // NAVIGATION
+  // =====================================================
 
   const [currentPage, setCurrentPage] = useState("dashboard");
 
-  // =========================
+  // =====================================================
   // TASK DATA
-  // =========================
+  // =====================================================
 
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
 
-  // =========================
+  // =====================================================
   // PROJECT DATA
-  // =========================
+  // =====================================================
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
-  // =========================
-  // FETCH TASKS FROM BACKEND
-  // =========================
+  // =====================================================
+  // BACKEND / SESSION ERROR
+  // =====================================================
 
-  const fetchTasks = async () => {
+  const [backendError, setBackendError] = useState(false);
+
+  // =====================================================
+  // LOGOUT HELPER
+  // =====================================================
+
+  const clearSession = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+    setTasks([]);
+    setProjects([]);
+    setShowSignup(false);
+    setCurrentPage("dashboard");
+  }, []);
+
+  // =====================================================
+  // FETCH TASKS
+  // =====================================================
+
+  const fetchTasks = useCallback(async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -72,15 +137,22 @@ function App() {
 
     try {
       setTasksLoading(true);
+      setBackendError(false);
 
-      const response = await fetch(`${API_URL}/tasks`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { response, data } = await apiRequest(
+        "/tasks",
+        token,
+        {
+          method: "GET",
+        }
+      );
 
-      const data = await response.json();
+      // Token expired / invalid.
+      if (response.status === 401 || response.status === 403) {
+        console.warn("Authentication token expired.");
+        clearSession();
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -88,20 +160,28 @@ function App() {
         );
       }
 
-      setTasks(data.tasks || []);
+      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
     } catch (error) {
-      console.error("Dashboard task fetch error:", error);
+      console.error("Task fetch error:", error);
+
+      // Don't remove the user's session just because
+      // the backend is temporarily slow.
+      if (error.name === "AbortError") {
+        console.warn("Task request timed out.");
+      }
+
       setTasks([]);
+      setBackendError(true);
     } finally {
       setTasksLoading(false);
     }
-  };
+  }, [clearSession]);
 
-  // =========================
+  // =====================================================
   // FETCH PROJECTS
-  // =========================
+  // =====================================================
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -110,18 +190,22 @@ function App() {
 
     try {
       setProjectsLoading(true);
+      setBackendError(false);
 
-      const response = await fetch(
-        `${API_URL}/projects`,
+      const { response, data } = await apiRequest(
+        "/projects",
+        token,
         {
           method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         }
       );
 
-      const data = await response.json();
+      // Token expired / invalid.
+      if (response.status === 401 || response.status === 403) {
+        console.warn("Authentication token expired.");
+        clearSession();
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -129,45 +213,46 @@ function App() {
         );
       }
 
-      setProjects(data.projects || []);
-    } catch (error) {
-      console.error(
-        "Dashboard project fetch error:",
-        error
+      setProjects(
+        Array.isArray(data.projects)
+          ? data.projects
+          : []
       );
+    } catch (error) {
+      console.error("Project fetch error:", error);
+
+      if (error.name === "AbortError") {
+        console.warn("Project request timed out.");
+      }
 
       setProjects([]);
+      setBackendError(true);
     } finally {
       setProjectsLoading(false);
     }
-  };
+  }, [clearSession]);
 
-  // =========================
-  // LOAD DATA WHEN USER LOGS IN
-  // =========================
-
-  useEffect(() => {
-    if (user) {
-      fetchTasks();
-      fetchProjects();
-    }
-  }, [user]);
-
-  // =========================
-  // REFRESH DATA WHEN
-  // RETURNING TO DASHBOARD
-  // =========================
+  // =====================================================
+  // LOAD DATA AFTER LOGIN
+  //
+  // IMPORTANT:
+  // Tasks and projects are fetched only once here.
+  // We removed the duplicate dashboard effect.
+  // =====================================================
 
   useEffect(() => {
-    if (user && currentPage === "dashboard") {
-      fetchTasks();
-      fetchProjects();
+    if (!user) {
+      return;
     }
-  }, [currentPage]);
 
-  // =========================
-  // LISTEN FOR TASK UPDATES
-  // =========================
+    // Run both requests in parallel.
+    fetchTasks();
+    fetchProjects();
+  }, [user, fetchTasks, fetchProjects]);
+
+  // =====================================================
+  // TASK UPDATE LISTENER
+  // =====================================================
 
   useEffect(() => {
     const handleTaskUpdate = () => {
@@ -197,11 +282,35 @@ function App() {
         handleTaskUpdate
       );
     };
-  }, [user]);
+  }, [user, fetchTasks]);
 
-  // =========================
+  // =====================================================
+  // PROJECT UPDATE LISTENER
+  // =====================================================
+
+  useEffect(() => {
+    const handleProjectUpdate = () => {
+      if (user) {
+        fetchProjects();
+      }
+    };
+
+    window.addEventListener(
+      "taskflowProjectsUpdated",
+      handleProjectUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "taskflowProjectsUpdated",
+        handleProjectUpdate
+      );
+    };
+  }, [user, fetchProjects]);
+
+  // =====================================================
   // TASK STATISTICS
-  // =========================
+  // =====================================================
 
   const totalTasks = tasks.length;
 
@@ -209,19 +318,19 @@ function App() {
     (task) => task.status === "Done"
   ).length;
 
-  // Current tasks = everything that is NOT completed
   const currentTasks = tasks.filter(
     (task) => task.status !== "Done"
   ).length;
 
-  // =========================
+  // =====================================================
   // TODAY'S DATE
-  // =========================
+  // =====================================================
 
   const getLocalDateString = () => {
     const date = new Date();
 
     const year = date.getFullYear();
+
     const month = String(
       date.getMonth() + 1
     ).padStart(2, "0");
@@ -235,9 +344,9 @@ function App() {
 
   const today = getLocalDateString();
 
-  // =========================
+  // =====================================================
   // OVERDUE TASKS
-  // =========================
+  // =====================================================
 
   const overdueTasks = tasks.filter((task) => {
     if (!task.dueDate) {
@@ -268,9 +377,9 @@ function App() {
     );
   }).length;
 
-  // =========================
+  // =====================================================
   // TODAY'S TASKS
-  // =========================
+  // =====================================================
 
   const todayTasks = tasks.filter((task) => {
     if (!task.dueDate) {
@@ -293,56 +402,50 @@ function App() {
       taskDate.getDate()
     ).padStart(2, "0");
 
-    const taskDueDate =
-      `${year}-${month}-${day}`;
+    const taskDueDate = `${year}-${month}-${day}`;
 
     return taskDueDate === today;
   });
 
-  // =========================
+  // =====================================================
   // PROJECT STATISTICS
-  // =========================
+  // =====================================================
 
   const activeProjects = projects.length;
 
-  // =========================
+  // =====================================================
   // LOGIN
-  // =========================
+  // =====================================================
 
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setShowSignup(false);
     setCurrentPage("dashboard");
+    setBackendError(false);
   };
 
-  // =========================
-  // SIGNUP SUCCESS
-  // =========================
+  // =====================================================
+  // SIGNUP
+  // =====================================================
 
   const handleSignup = (newUser) => {
     setUser(newUser);
     setShowSignup(false);
     setCurrentPage("dashboard");
+    setBackendError(false);
   };
 
-  // =========================
+  // =====================================================
   // LOGOUT
-  // =========================
+  // =====================================================
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    setUser(null);
-    setTasks([]);
-    setProjects([]);
-    setShowSignup(false);
-    setCurrentPage("dashboard");
+    clearSession();
   };
 
-  // =========================
+  // =====================================================
   // NOT LOGGED IN
-  // =========================
+  // =====================================================
 
   if (!user) {
     if (showSignup) {
@@ -366,9 +469,9 @@ function App() {
     );
   }
 
-  // =========================
+  // =====================================================
   // USER INITIALS
-  // =========================
+  // =====================================================
 
   const userInitials = user.name
     ? user.name
@@ -380,9 +483,9 @@ function App() {
         .toUpperCase()
     : "U";
 
-  // =========================
+  // =====================================================
   // GET PROJECT NAME
-  // =========================
+  // =====================================================
 
   const getProjectName = (task) => {
     if (
@@ -404,16 +507,27 @@ function App() {
       : "Task";
   };
 
-  // =========================
-  // LOGGED IN UI
-  // =========================
+  // =====================================================
+  // RETRY BACKEND
+  // =====================================================
+
+  const handleRetry = () => {
+    setBackendError(false);
+
+    fetchTasks();
+    fetchProjects();
+  };
+
+  // =====================================================
+  // LOGGED-IN UI
+  // =====================================================
 
   return (
     <div className="app">
 
-      {/* =========================
+      {/* =================================================
           SIDEBAR
-      ========================= */}
+      ================================================= */}
 
       <aside className="sidebar">
 
@@ -581,15 +695,15 @@ function App() {
 
       </aside>
 
-      {/* =========================
+      {/* =================================================
           MAIN CONTENT
-      ========================= */}
+      ================================================= */}
 
       <main className="main">
 
-        {/* =========================
+        {/* =================================================
             DASHBOARD
-        ========================= */}
+        ================================================= */}
 
         {currentPage === "dashboard" && (
 
@@ -642,7 +756,8 @@ function App() {
 
               <h1>
                 Good to see you,{" "}
-                {user.name?.split(" ")[0] || "User"}!
+                {user.name?.split(" ")[0] ||
+                  "User"}!
               </h1>
 
               <p>
@@ -652,9 +767,50 @@ function App() {
 
             </section>
 
-            {/* =========================
+            {/* BACKEND STATUS */}
+
+            {backendError && (
+              <div
+                style={{
+                  marginBottom: "20px",
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  background: "#3b2714",
+                  border: "1px solid #5a3b1c",
+                  color: "#ffad2f",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "15px",
+                  fontSize: "13px",
+                }}
+              >
+                <span>
+                  The server is taking longer than
+                  usual. Your dashboard is still
+                  available.
+                </span>
+
+                <button
+                  onClick={handleRetry}
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: "7px",
+                    background: "#28e875",
+                    color: "#06130b",
+                    fontWeight: "700",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* =================================================
                 STATISTICS
-            ========================= */}
+            ================================================= */}
 
             <section className="stats">
 
@@ -772,9 +928,9 @@ function App() {
 
             </section>
 
-            {/* =========================
+            {/* =================================================
                 TASK OVERVIEW
-            ========================= */}
+            ================================================= */}
 
             <section className="section">
 
@@ -809,15 +965,18 @@ function App() {
                   <div
                     className="task-row"
                     style={{
-                      justifyContent: "center",
+                      justifyContent:
+                        "center",
                     }}
                   >
                     <div className="task-info">
                       <h3>
                         Loading tasks...
                       </h3>
+
                       <span>
-                        Please wait.
+                        The dashboard is loading
+                        your latest tasks.
                       </span>
                     </div>
                   </div>
@@ -827,7 +986,8 @@ function App() {
                   <div
                     className="task-row"
                     style={{
-                      justifyContent: "center",
+                      justifyContent:
+                        "center",
                     }}
                   >
 
@@ -838,7 +998,8 @@ function App() {
                       </h3>
 
                       <span>
-                        Create a task to get started.
+                        Create a task to get
+                        started.
                       </span>
 
                     </div>
@@ -903,9 +1064,9 @@ function App() {
 
             </section>
 
-            {/* =========================
+            {/* =================================================
                 CURRENT PROJECTS
-            ========================= */}
+            ================================================= */}
 
             <section className="section">
 
@@ -935,7 +1096,26 @@ function App() {
 
               <div className="projects-grid">
 
-                {projects.length === 0 ? (
+                {projectsLoading ? (
+
+                  <div className="create-project">
+
+                    <div className="create-icon">
+                      ...
+                    </div>
+
+                    <h3>
+                      Loading Projects
+                    </h3>
+
+                    <p>
+                      Please wait while your
+                      projects load.
+                    </p>
+
+                  </div>
+
+                ) : projects.length === 0 ? (
 
                   <div className="create-project">
 
@@ -978,22 +1158,28 @@ function App() {
                               }`}
                             >
                               {project.projectName
-                                ?.substring(0, 2)
+                                ?.substring(
+                                  0,
+                                  2
+                                )
                                 .toUpperCase()}
                             </div>
 
                             <span className="due">
+
                               {project.deadline
                                 ? `Due ${new Date(
                                     project.deadline
                                   ).toLocaleDateString(
                                     "en-US",
                                     {
-                                      month: "short",
+                                      month:
+                                        "short",
                                       day: "numeric",
                                     }
                                   )}`
                                 : "No deadline"}
+
                             </span>
 
                           </div>
@@ -1010,8 +1196,12 @@ function App() {
                           <div className="project-members">
 
                             <div className="member">
-                              {project.teamID?.teamName
-                                ?.substring(0, 2)
+                              {project.teamID
+                                ?.teamName
+                                ?.substring(
+                                  0,
+                                  2
+                                )
                                 .toUpperCase() ||
                                 "TM"}
                             </div>
@@ -1029,9 +1219,9 @@ function App() {
 
             </section>
 
-            {/* =========================
+            {/* =================================================
                 TODAY'S TASKS
-            ========================= */}
+            ================================================= */}
 
             <section className="section">
 
@@ -1061,12 +1251,37 @@ function App() {
 
               <div className="tasks-card">
 
-                {todayTasks.length === 0 ? (
+                {tasksLoading ? (
 
                   <div
                     className="task-row"
                     style={{
-                      justifyContent: "center",
+                      justifyContent:
+                        "center",
+                    }}
+                  >
+
+                    <div className="task-info">
+
+                      <h3>
+                        Loading today's tasks...
+                      </h3>
+
+                      <span>
+                        Please wait.
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                ) : todayTasks.length === 0 ? (
+
+                  <div
+                    className="task-row"
+                    style={{
+                      justifyContent:
+                        "center",
                     }}
                   >
 
@@ -1146,41 +1361,41 @@ function App() {
 
         )}
 
-        {/* =========================
-            PROJECTS PAGE
-        ========================= */}
+        {/* =================================================
+            PROJECTS
+        ================================================= */}
 
         {currentPage === "projects" && (
           <Projects />
         )}
 
-        {/* =========================
-            MY TASKS PAGE
-        ========================= */}
+        {/* =================================================
+            MY TASKS
+        ================================================= */}
 
         {currentPage === "tasks" && (
           <MyTasks />
         )}
 
-        {/* =========================
-            TEAMS PAGE
-        ========================= */}
+        {/* =================================================
+            TEAMS
+        ================================================= */}
 
         {currentPage === "teams" && (
           <Teams />
         )}
 
-        {/* =========================
-            ACTIVITY PAGE
-        ========================= */}
+        {/* =================================================
+            ACTIVITY
+        ================================================= */}
 
         {currentPage === "activity" && (
           <Activity />
         )}
 
-        {/* =========================
-            SETTINGS PAGE
-        ========================= */}
+        {/* =================================================
+            SETTINGS
+        ================================================= */}
 
         {currentPage === "settings" && (
           <Settings />
