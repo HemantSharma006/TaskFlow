@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import Login from "./Login";
 import Signup from "./Signup";
@@ -12,123 +12,59 @@ import "./App.css";
 
 const API_URL = "https://taskflow-lzcg.onrender.com/api";
 
-// =====================================================
-// API HELPER
-// =====================================================
-
-const apiRequest = async (endpoint, token, options = {}) => {
-  const controller = new AbortController();
-
-  // Prevent the UI from waiting forever if Render is slow/unavailable.
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 15000);
-
-  try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        ...(options.headers || {}),
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    let data = {};
-
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
-
-    return {
-      response,
-      data,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-};
-
 function App() {
-  // =====================================================
-  // USER / LOGIN SESSION
-  // =====================================================
+  // =========================
+  // CHECK LOGIN SESSION
+  // =========================
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
-    const savedToken = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-    // If one exists without the other, the session is invalid.
-    if (!savedUser || !savedToken) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      return null;
+    if (savedUser && token) {
+      try {
+        return JSON.parse(savedUser);
+      } catch {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        return null;
+      }
     }
 
-    try {
-      return JSON.parse(savedUser);
-    } catch {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      return null;
-    }
+    return null;
   });
 
-  // =====================================================
-  // LOGIN / SIGNUP
-  // =====================================================
+  // =========================
+  // LOGIN / SIGNUP STATE
+  // =========================
 
   const [showSignup, setShowSignup] = useState(false);
 
-  // =====================================================
-  // NAVIGATION
-  // =====================================================
+  // =========================
+  // PAGE NAVIGATION
+  // =========================
 
   const [currentPage, setCurrentPage] = useState("dashboard");
 
-  // =====================================================
+  // =========================
   // TASK DATA
-  // =====================================================
+  // =========================
 
   const [tasks, setTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
 
-  // =====================================================
+  // =========================
   // PROJECT DATA
-  // =====================================================
+  // =========================
 
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
-  // =====================================================
-  // BACKEND / SESSION ERROR
-  // =====================================================
-
-  const [backendError, setBackendError] = useState(false);
-
-  // =====================================================
-  // LOGOUT HELPER
-  // =====================================================
-
-  const clearSession = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    setUser(null);
-    setTasks([]);
-    setProjects([]);
-    setShowSignup(false);
-    setCurrentPage("dashboard");
-  }, []);
-
-  // =====================================================
+  // =========================
   // FETCH TASKS
-  // =====================================================
+  // =========================
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -137,20 +73,24 @@ function App() {
 
     try {
       setTasksLoading(true);
-      setBackendError(false);
 
-      const { response, data } = await apiRequest(
-        "/tasks",
-        token,
-        {
-          method: "GET",
-        }
-      );
+      const response = await fetch(`${API_URL}/tasks`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        cache: "no-store",
+      });
 
-      // Token expired / invalid.
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Authentication token expired.");
-        clearSession();
+      const data = await response.json();
+
+      if (
+        response.status === 401 ||
+        response.status === 403
+      ) {
+        handleLogout();
         return;
       }
 
@@ -160,28 +100,28 @@ function App() {
         );
       }
 
-      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+      setTasks(
+        Array.isArray(data.tasks)
+          ? data.tasks
+          : []
+      );
     } catch (error) {
-      console.error("Task fetch error:", error);
-
-      // Don't remove the user's session just because
-      // the backend is temporarily slow.
-      if (error.name === "AbortError") {
-        console.warn("Task request timed out.");
-      }
+      console.error(
+        "Dashboard task fetch error:",
+        error
+      );
 
       setTasks([]);
-      setBackendError(true);
     } finally {
       setTasksLoading(false);
     }
-  }, [clearSession]);
+  };
 
-  // =====================================================
+  // =========================
   // FETCH PROJECTS
-  // =====================================================
+  // =========================
 
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -190,20 +130,27 @@ function App() {
 
     try {
       setProjectsLoading(true);
-      setBackendError(false);
 
-      const { response, data } = await apiRequest(
-        "/projects",
-        token,
+      const response = await fetch(
+        `${API_URL}/projects`,
         {
           method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+          cache: "no-store",
         }
       );
 
-      // Token expired / invalid.
-      if (response.status === 401 || response.status === 403) {
-        console.warn("Authentication token expired.");
-        clearSession();
+      const data = await response.json();
+
+      if (
+        response.status === 401 ||
+        response.status === 403
+      ) {
+        handleLogout();
         return;
       }
 
@@ -219,45 +166,49 @@ function App() {
           : []
       );
     } catch (error) {
-      console.error("Project fetch error:", error);
-
-      if (error.name === "AbortError") {
-        console.warn("Project request timed out.");
-      }
+      console.error(
+        "Dashboard project fetch error:",
+        error
+      );
 
       setProjects([]);
-      setBackendError(true);
     } finally {
       setProjectsLoading(false);
     }
-  }, [clearSession]);
+  };
 
-  // =====================================================
-  // LOAD DATA AFTER LOGIN
-  //
-  // IMPORTANT:
-  // Tasks and projects are fetched only once here.
-  // We removed the duplicate dashboard effect.
-  // =====================================================
+  // =========================
+  // LOAD DATA WHEN USER LOGS IN
+  // =========================
 
   useEffect(() => {
-    if (!user) {
-      return;
+    if (user) {
+      fetchTasks();
+      fetchProjects();
     }
+  }, [user]);
 
-    // Run both requests in parallel.
-    fetchTasks();
-    fetchProjects();
-  }, [user, fetchTasks, fetchProjects]);
+  // =========================
+  // REFRESH DATA WHEN
+  // RETURNING TO DASHBOARD
+  // =========================
 
-  // =====================================================
-  // TASK UPDATE LISTENER
-  // =====================================================
+  useEffect(() => {
+    if (user && currentPage === "dashboard") {
+      fetchTasks();
+      fetchProjects();
+    }
+  }, [currentPage]);
+
+  // =========================
+  // LISTEN FOR TASK UPDATES
+  // =========================
 
   useEffect(() => {
     const handleTaskUpdate = () => {
       if (user) {
         fetchTasks();
+        fetchProjects();
       }
     };
 
@@ -282,35 +233,11 @@ function App() {
         handleTaskUpdate
       );
     };
-  }, [user, fetchTasks]);
+  }, [user]);
 
-  // =====================================================
-  // PROJECT UPDATE LISTENER
-  // =====================================================
-
-  useEffect(() => {
-    const handleProjectUpdate = () => {
-      if (user) {
-        fetchProjects();
-      }
-    };
-
-    window.addEventListener(
-      "taskflowProjectsUpdated",
-      handleProjectUpdate
-    );
-
-    return () => {
-      window.removeEventListener(
-        "taskflowProjectsUpdated",
-        handleProjectUpdate
-      );
-    };
-  }, [user, fetchProjects]);
-
-  // =====================================================
+  // =========================
   // TASK STATISTICS
-  // =====================================================
+  // =========================
 
   const totalTasks = tasks.length;
 
@@ -318,13 +245,9 @@ function App() {
     (task) => task.status === "Done"
   ).length;
 
-  const currentTasks = tasks.filter(
-    (task) => task.status !== "Done"
-  ).length;
-
-  // =====================================================
+  // =========================
   // TODAY'S DATE
-  // =====================================================
+  // =========================
 
   const getLocalDateString = () => {
     const date = new Date();
@@ -344,9 +267,9 @@ function App() {
 
   const today = getLocalDateString();
 
-  // =====================================================
+  // =========================
   // OVERDUE TASKS
-  // =====================================================
+  // =========================
 
   const overdueTasks = tasks.filter((task) => {
     if (!task.dueDate) {
@@ -377,9 +300,9 @@ function App() {
     );
   }).length;
 
-  // =====================================================
+  // =========================
   // TODAY'S TASKS
-  // =====================================================
+  // =========================
 
   const todayTasks = tasks.filter((task) => {
     if (!task.dueDate) {
@@ -402,50 +325,102 @@ function App() {
       taskDate.getDate()
     ).padStart(2, "0");
 
-    const taskDueDate = `${year}-${month}-${day}`;
+    const taskDueDate =
+      `${year}-${month}-${day}`;
 
     return taskDueDate === today;
   });
 
-  // =====================================================
-  // PROJECT STATISTICS
-  // =====================================================
+  // =========================
+  // ACTIVE PROJECTS
+  // =========================
+  //
+  // A project is ACTIVE only when:
+  //
+  // 1. It has at least one task
+  // 2. At least one of those tasks is NOT Done
+  //
+  // Therefore:
+  //
+  // All tasks Done       -> NOT ACTIVE
+  // No tasks             -> NOT ACTIVE
+  // To Do task exists    -> ACTIVE
+  // In Progress exists   -> ACTIVE
+  //
+  // =========================
 
-  const activeProjects = projects.length;
+  const activeProjects = projects.filter(
+    (project) => {
+      const projectId = project._id;
 
-  // =====================================================
+      const projectTasks = tasks.filter(
+        (task) => {
+          if (!task.projectID) {
+            return false;
+          }
+
+          const taskProjectId =
+            typeof task.projectID === "object"
+              ? task.projectID._id
+              : task.projectID;
+
+          return (
+            String(taskProjectId) ===
+            String(projectId)
+          );
+        }
+      );
+
+      // No tasks = not active
+      if (projectTasks.length === 0) {
+        return false;
+      }
+
+      // At least one unfinished task = active
+      return projectTasks.some(
+        (task) => task.status !== "Done"
+      );
+    }
+  ).length;
+
+  // =========================
   // LOGIN
-  // =====================================================
+  // =========================
 
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setShowSignup(false);
     setCurrentPage("dashboard");
-    setBackendError(false);
   };
 
-  // =====================================================
-  // SIGNUP
-  // =====================================================
+  // =========================
+  // SIGNUP SUCCESS
+  // =========================
 
   const handleSignup = (newUser) => {
     setUser(newUser);
     setShowSignup(false);
     setCurrentPage("dashboard");
-    setBackendError(false);
   };
 
-  // =====================================================
+  // =========================
   // LOGOUT
-  // =====================================================
+  // =========================
 
   const handleLogout = () => {
-    clearSession();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+    setTasks([]);
+    setProjects([]);
+    setShowSignup(false);
+    setCurrentPage("dashboard");
   };
 
-  // =====================================================
+  // =========================
   // NOT LOGGED IN
-  // =====================================================
+  // =========================
 
   if (!user) {
     if (showSignup) {
@@ -469,9 +444,9 @@ function App() {
     );
   }
 
-  // =====================================================
+  // =========================
   // USER INITIALS
-  // =====================================================
+  // =========================
 
   const userInitials = user.name
     ? user.name
@@ -483,9 +458,9 @@ function App() {
         .toUpperCase()
     : "U";
 
-  // =====================================================
+  // =========================
   // GET PROJECT NAME
-  // =====================================================
+  // =========================
 
   const getProjectName = (task) => {
     if (
@@ -499,7 +474,9 @@ function App() {
     }
 
     const project = projects.find(
-      (item) => item._id === task.projectID
+      (item) =>
+        String(item._id) ===
+        String(task.projectID)
     );
 
     return project
@@ -507,31 +484,18 @@ function App() {
       : "Task";
   };
 
-  // =====================================================
-  // RETRY BACKEND
-  // =====================================================
-
-  const handleRetry = () => {
-    setBackendError(false);
-
-    fetchTasks();
-    fetchProjects();
-  };
-
-  // =====================================================
-  // LOGGED-IN UI
-  // =====================================================
+  // =========================
+  // LOGGED IN UI
+  // =========================
 
   return (
     <div className="app">
 
-      {/* =================================================
+      {/* =========================
           SIDEBAR
-      ================================================= */}
+      ========================= */}
 
       <aside className="sidebar">
-
-        {/* BRAND */}
 
         <div className="brand">
 
@@ -546,15 +510,11 @@ function App() {
 
         </div>
 
-        {/* NAVIGATION */}
-
         <nav className="sidebar-nav">
 
           <p className="nav-title">
             MAIN
           </p>
-
-          {/* OVERVIEW */}
 
           <button
             className={`nav-item ${
@@ -570,8 +530,6 @@ function App() {
             Overview
           </button>
 
-          {/* MY TASKS */}
-
           <button
             className={`nav-item ${
               currentPage === "tasks"
@@ -585,8 +543,6 @@ function App() {
             <span>✓</span>
             My Tasks
           </button>
-
-          {/* PROJECTS */}
 
           <button
             className={`nav-item ${
@@ -606,8 +562,6 @@ function App() {
             WORKSPACE
           </p>
 
-          {/* TEAMS */}
-
           <button
             className={`nav-item ${
               currentPage === "teams"
@@ -622,8 +576,6 @@ function App() {
             Teams
           </button>
 
-          {/* ACTIVITY */}
-
           <button
             className={`nav-item ${
               currentPage === "activity"
@@ -637,8 +589,6 @@ function App() {
             <span>◷</span>
             Activity
           </button>
-
-          {/* SETTINGS */}
 
           <button
             className={`nav-item ${
@@ -655,8 +605,6 @@ function App() {
           </button>
 
         </nav>
-
-        {/* SIDEBAR BOTTOM */}
 
         <div className="sidebar-bottom">
 
@@ -695,21 +643,19 @@ function App() {
 
       </aside>
 
-      {/* =================================================
+      {/* =========================
           MAIN CONTENT
-      ================================================= */}
+      ========================= */}
 
       <main className="main">
 
-        {/* =================================================
+        {/* =========================
             DASHBOARD
-        ================================================= */}
+        ========================= */}
 
         {currentPage === "dashboard" && (
 
           <>
-
-            {/* TOPBAR */}
 
             <div className="topbar">
 
@@ -750,8 +696,6 @@ function App() {
 
             </div>
 
-            {/* HEADER */}
-
             <section className="page-header">
 
               <h1>
@@ -767,54 +711,11 @@ function App() {
 
             </section>
 
-            {/* BACKEND STATUS */}
-
-            {backendError && (
-              <div
-                style={{
-                  marginBottom: "20px",
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  background: "#3b2714",
-                  border: "1px solid #5a3b1c",
-                  color: "#ffad2f",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "15px",
-                  fontSize: "13px",
-                }}
-              >
-                <span>
-                  The server is taking longer than
-                  usual. Your dashboard is still
-                  available.
-                </span>
-
-                <button
-                  onClick={handleRetry}
-                  style={{
-                    padding: "7px 12px",
-                    borderRadius: "7px",
-                    background: "#28e875",
-                    color: "#06130b",
-                    fontWeight: "700",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {/* =================================================
+            {/* =========================
                 STATISTICS
-            ================================================= */}
+            ========================= */}
 
             <section className="stats">
-
-              {/* ACTIVE PROJECTS */}
 
               <div className="stat-card">
 
@@ -835,14 +736,13 @@ function App() {
                 </p>
 
                 <h2>
-                  {projectsLoading
+                  {projectsLoading ||
+                  tasksLoading
                     ? "..."
                     : activeProjects}
                 </h2>
 
               </div>
-
-              {/* TOTAL TASKS */}
 
               <div className="stat-card">
 
@@ -870,8 +770,6 @@ function App() {
 
               </div>
 
-              {/* COMPLETED TASKS */}
-
               <div className="stat-card">
 
                 <div className="stat-top">
@@ -897,8 +795,6 @@ function App() {
                 </h2>
 
               </div>
-
-              {/* OVERDUE TASKS */}
 
               <div className="stat-card">
 
@@ -928,9 +824,9 @@ function App() {
 
             </section>
 
-            {/* =================================================
+            {/* =========================
                 TASK OVERVIEW
-            ================================================= */}
+            ========================= */}
 
             <section className="section">
 
@@ -969,16 +865,19 @@ function App() {
                         "center",
                     }}
                   >
+
                     <div className="task-info">
+
                       <h3>
                         Loading tasks...
                       </h3>
 
                       <span>
-                        The dashboard is loading
-                        your latest tasks.
+                        Please wait.
                       </span>
+
                     </div>
+
                   </div>
 
                 ) : tasks.length === 0 ? (
@@ -1051,7 +950,8 @@ function App() {
                               : "todo-status"
                           }`}
                         >
-                          {task.status || "To Do"}
+                          {task.status ||
+                            "To Do"}
                         </div>
 
                       </div>
@@ -1064,9 +964,9 @@ function App() {
 
             </section>
 
-            {/* =================================================
+            {/* =========================
                 CURRENT PROJECTS
-            ================================================= */}
+            ========================= */}
 
             <section className="section">
 
@@ -1096,26 +996,7 @@ function App() {
 
               <div className="projects-grid">
 
-                {projectsLoading ? (
-
-                  <div className="create-project">
-
-                    <div className="create-icon">
-                      ...
-                    </div>
-
-                    <h3>
-                      Loading Projects
-                    </h3>
-
-                    <p>
-                      Please wait while your
-                      projects load.
-                    </p>
-
-                  </div>
-
-                ) : projects.length === 0 ? (
+                {projects.length === 0 ? (
 
                   <div className="create-project">
 
@@ -1189,13 +1070,16 @@ function App() {
                           </h3>
 
                           <p className="project-description">
+
                             {project.description ||
                               "No description provided."}
+
                           </p>
 
                           <div className="project-members">
 
                             <div className="member">
+
                               {project.teamID
                                 ?.teamName
                                 ?.substring(
@@ -1204,6 +1088,7 @@ function App() {
                                 )
                                 .toUpperCase() ||
                                 "TM"}
+
                             </div>
 
                           </div>
@@ -1219,9 +1104,9 @@ function App() {
 
             </section>
 
-            {/* =================================================
+            {/* =========================
                 TODAY'S TASKS
-            ================================================= */}
+            ========================= */}
 
             <section className="section">
 
@@ -1251,31 +1136,7 @@ function App() {
 
               <div className="tasks-card">
 
-                {tasksLoading ? (
-
-                  <div
-                    className="task-row"
-                    style={{
-                      justifyContent:
-                        "center",
-                    }}
-                  >
-
-                    <div className="task-info">
-
-                      <h3>
-                        Loading today's tasks...
-                      </h3>
-
-                      <span>
-                        Please wait.
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                ) : todayTasks.length === 0 ? (
+                {todayTasks.length === 0 ? (
 
                   <div
                     className="task-row"
@@ -1344,7 +1205,8 @@ function App() {
                               : "todo-status"
                           }`}
                         >
-                          {task.status || "To Do"}
+                          {task.status ||
+                            "To Do"}
                         </div>
 
                       </div>
@@ -1361,41 +1223,41 @@ function App() {
 
         )}
 
-        {/* =================================================
-            PROJECTS
-        ================================================= */}
+        {/* =========================
+            PROJECTS PAGE
+        ========================= */}
 
         {currentPage === "projects" && (
           <Projects />
         )}
 
-        {/* =================================================
-            MY TASKS
-        ================================================= */}
+        {/* =========================
+            MY TASKS PAGE
+        ========================= */}
 
         {currentPage === "tasks" && (
           <MyTasks />
         )}
 
-        {/* =================================================
-            TEAMS
-        ================================================= */}
+        {/* =========================
+            TEAMS PAGE
+        ========================= */}
 
         {currentPage === "teams" && (
           <Teams />
         )}
 
-        {/* =================================================
-            ACTIVITY
-        ================================================= */}
+        {/* =========================
+            ACTIVITY PAGE
+        ========================= */}
 
         {currentPage === "activity" && (
           <Activity />
         )}
 
-        {/* =================================================
-            SETTINGS
-        ================================================= */}
+        {/* =========================
+            SETTINGS PAGE
+        ========================= */}
 
         {currentPage === "settings" && (
           <Settings />
